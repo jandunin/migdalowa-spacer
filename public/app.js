@@ -6,9 +6,9 @@ import {computeBoundsTree,acceleratedRaycast} from 'three-mesh-bvh';
 T.BufferGeometry.prototype.computeBoundsTree=computeBoundsTree;T.Mesh.prototype.raycast=acceleratedRaycast;
 const $=id=>document.getElementById(id),scene=new T.Scene();scene.background=new T.Color('#bdcbd0');
 const camera=new T.PerspectiveCamera(68,innerWidth/innerHeight,.04,100),renderer=new T.WebGLRenderer({canvas:$('view'),antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
 const pmrem=new T.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.65;
-scene.add(new T.HemisphereLight(0xe5eefb,0xa59a82,1.8));const sun=new T.DirectionalLight(0xffecd2,2.4);sun.position.set(15,20,5);scene.add(sun);
+scene.add(new T.HemisphereLight(0xe5eefb,0xa59a82,.9));const sun=new T.DirectionalLight(0xffecd2,2.4);sun.position.set(15,20,5);scene.add(sun);
 const controls=new PointerLockControls(camera,document.body);controls.pointerSpeed=.65;
 let dragMode=false,dragging=false;
 renderer.domElement.addEventListener('pointerdown',()=>{dragging=true});addEventListener('pointerup',()=>dragging=false);
@@ -43,9 +43,15 @@ function configureDoors(root){
  if(spec.merged){const inner=box.clone();inner.min[axis]+=.053;inner.max[axis]-=.053;inner.max.y=inner.min.y+2.047;inner.max[thin]=inner.min[thin]+.0502;inner.expandByScalar(.0002);moving=splitLeaf(node,inner);if(!moving)continue;box=new T.Box3().setFromObject(moving)}
  const pivot=new T.Group();pivot.name='DOOR_'+spec.id;pivot.position.copy(box.getCenter(new T.Vector3()));pivot.position[axis]=box[spec.hinge][axis];pivot.position.y=box.min.y;scene.add(pivot);pivot.updateMatrixWorld();pivot.attach(moving);
  if(!spec.merged)for(const part of all)if(part!==moving&&part.userData.sourceName===node.userData.sourceName)pivot.attach(part);
- // Keep the existing handles and the entrance inset on the moving leaf.
- const attachBox=box.clone().expandByScalar(.14);
- for(const obj of all){if(obj===node||obj===moving||obj.userData.door)continue;const b=new T.Box3().setFromObject(obj),s=b.getSize(new T.Vector3());if(attachBox.containsBox(b)&&((s.x<.25&&s.y<.15&&s.z<.25)||((spec.id==='wejsciowe'&&(obj.userData.sourceName||'').includes('69fe9409'))||(spec.id==='pietro-1'&&(obj.userData.sourceName||'').includes('0b7058eb')))))pivot.attach(obj)}
+ // Only explicitly identified door parts may move; proximity is not ownership.
+ const parts={
+ 'parter-1':['G-76c7e4a7-74de-4a3c-a863-8a707f596720','G-cd716984-3f11-453f-add0-3f626044793f'],
+ 'parter-2':['G-76c7e4a7-74de-4a3c-a863-8a707f596720.001','G-cd716984-3f11-453f-add0-3f626044793f.001'],
+ 'parter-3':['G-72964c98-90e1-48f6-a039-1215386a8607','G-be850aa2-b39d-4d39-8f2e-c28cb4613d1a'],
+ 'wejsciowe':['G-312b3ac2-f1eb-456f-a480-d937b9eb1cbb','G-68dca0a9-bf2c-4980-ab85-e53e4249a107','G-69fe9409-b27b-4624-9558-6d641419da6b'],
+ 'pietro-1':['G-32419953-18aa-4523-ace0-066113568b10.001','G-cf419c3a-fa0a-481e-b3df-d641fa1e1b5c','G-0b7058eb-be13-4eb0-b0dd-69270339a7cd'],
+ 'pietro-2':['G-cf419c3a-fa0a-481e-b3df-d641fa1e1b5c.001']};
+ for(const obj of all)if((parts[spec.id]||[]).includes(obj.userData.sourceName))pivot.attach(obj);
  const d={id:spec.id,pivot,goal:0,openAngle:spec.sign*Math.PI/2,meshes:[]};pivot.traverse(o=>{if(o.isMesh){o.userData.door=d;d.meshes.push(o)}});doors.push(d);
  }
 }
@@ -53,17 +59,35 @@ function buildCollision(){scene.updateMatrixWorld(true);scene.traverse(o=>{if(!o
 function candidates(origin,distance){const near=[];for(const m of staticMeshes)if(m.userData.bounds.distanceToPoint(origin)<distance+.02)near.push(m);for(const d of doors)near.push(...d.meshes);return near}
 function cast(origin,direction,length,meshes=null){ray.set(origin,direction);ray.near=0;ray.far=length;return ray.intersectObjects(meshes||candidates(origin,length),false)[0]}
 const radial=Array.from({length:16},(_,i)=>new T.Vector3(Math.cos(i*Math.PI/8),0,Math.sin(i*Math.PI/8)));
-function blocked(p,only=null){for(const h of [.2,.65,1.15,1.55]){const origin=new T.Vector3(p.x,p.y-1.65+h,p.z),near=only||candidates(origin,.245);for(const dir of radial)if(cast(origin,dir,.235,near))return true}return false}
-function move(delta){const candidate=camera.position.clone().add(delta);if(blocked(candidate))return false;
- const origin=candidate.clone();origin.y=camera.position.y-1.65+.22;const hit=cast(origin,new T.Vector3(0,-1,0),.5);if(!hit)return false;const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);if(normal.y<.55)return false;candidate.y=hit.point.y+1.65;if(Math.abs(candidate.y-camera.position.y)>.23)return false;camera.position.copy(candidate);return true}
+function blocked(p,only=null){for(const h of [.28,.65,1.15,1.55]){const origin=new T.Vector3(p.x,p.y-1.65+h,p.z),near=only||candidates(origin,.245);for(const dir of radial)if(cast(origin,dir,.235,near))return true}return false}
+function move(delta){
+ const candidate=camera.position.clone().add(delta),origin=candidate.clone();
+ // Find the next tread before testing the body against its riser.
+ origin.y=camera.position.y-1.65+.27;
+ const hit=cast(origin,new T.Vector3(0,-1,0),.55);if(!hit)return false;
+ const normal=hit.face.normal.clone().applyMatrix3(new T.Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize();
+ if(Math.abs(normal.y)<.55)return false;
+ candidate.y=hit.point.y+1.65;
+ if(Math.abs(candidate.y-camera.position.y)>.265||blocked(candidate))return false;
+ camera.position.copy(candidate);return true;
+}
 function update(dt){if(!ready)return;for(const d of doors){const old=d.pivot.rotation.y;d.pivot.rotation.y=T.MathUtils.damp(old,d.goal,5,dt);if(Math.abs(d.pivot.rotation.y-d.goal)<.002)d.pivot.rotation.y=d.goal;d.pivot.updateMatrixWorld(true);if(old!==d.pivot.rotation.y&&blocked(camera.position,d.meshes)){d.pivot.rotation.y=old;d.goal=old;d.pivot.updateMatrixWorld(true)}}
  if((controls.isLocked||dragMode)){const forward=new T.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();const right=new T.Vector3().crossVectors(forward,camera.up);const delta=new T.Vector3().addScaledVector(forward,Number(keys.has('KeyW'))-Number(keys.has('KeyS'))).addScaledVector(right,Number(keys.has('KeyD'))-Number(keys.has('KeyA')));if(delta.lengthSq()){delta.normalize().multiplyScalar(1.2*dt);const n=Math.ceil(delta.length()/.025);delta.divideScalar(n);for(let i=0;i<n;i++){if(!move(delta)){move(new T.Vector3(delta.x,0,0));move(new T.Vector3(0,0,delta.z))}}}}
  const dir=new T.Vector3();camera.getWorldDirection(dir);const hit=cast(camera.position,dir,2.2);target=hit?.object.userData.door||null;$('hint').textContent=(controls.isLocked||dragMode)&&target?'O · '+(target.goal===0?'Otwórz drzwi':'Zamknij drzwi'):'';
 }
-new GLTFLoader().load('./assets/interior.glb',async gltf=>{try{scene.add(gltf.scene);gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==undefined)o.userData.sourceName=gltf.parser.json.nodes[a.nodes].name;else if(o.parent)o.userData.sourceName=o.parent.userData.sourceName;if(o.isMesh){o.material.side=T.DoubleSide;const mats=Array.isArray(o.material)?o.material:[o.material];for(const m of mats){if(!/glass|szk|mirror|lustro|metal|chrome|steel/i.test(m.name)){m.metalness=0;m.roughness=Math.max(.45,m.roughness)}m.envMapIntensity=.6}}});$('status').textContent='Przygotowanie kolizji…';await new Promise(r=>setTimeout(r,30));configureDoors(gltf.scene);buildCollision();ready=true;$('progress').hidden=true;$('start').disabled=false;$('start').textContent='Rozpocznij spacer';$('status').textContent=`Gotowe · ${doors.length} drzwi interaktywnych`;window.walkthrough={scene,camera,doors,move,cast,blocked,teleport,renderer,controls,ready:true};}catch(e){fail(e)}},p=>{if(p.total){$('progress').value=p.loaded/p.total*100;$('status').textContent=`Wczytywanie ${Math.round(p.loaded/p.total*100)}%`}},fail);
+new GLTFLoader().load('./assets/interior.glb',async gltf=>{try{scene.add(gltf.scene);gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==undefined)o.userData.sourceName=gltf.parser.json.nodes[a.nodes].name;else if(o.parent)o.userData.sourceName=o.parent.userData.sourceName;if(o.isMesh){o.material.side=T.DoubleSide;const mats=Array.isArray(o.material)?o.material:[o.material];for(const m of mats){
+ // Imported BLEND on opaque wood/fabric caused depth-sort flicker when moving.
+ const glass=/glass|szk|Double Mulled Window_Material5|Single Door_Material7/i.test(m.name)&&!/mirror|switch/i.test(m.name);
+ const cutout=/cane|vegetation|leaf|leaves|palm|fern/i.test(m.name);
+ if(!glass&&m.opacity>=.99){m.transparent=false;m.depthWrite=true;m.alphaTest=cutout?.4:0;}
+ m.side=T.DoubleSide;
+ if(!m.userData.referenceTintApplied&&m.name==='Wood_Floor_01_1K'){m.color.multiply(new T.Color().setRGB(.48,.32,.21));m.userData.referenceTintApplied=true;}
+ if(!/glass|szk|mirror|lustro|metal|chrome|steel/i.test(m.name)){m.metalness=0;m.roughness=Math.max(.45,m.roughness)}m.envMapIntensity=.6}}});$('status').textContent='Przygotowanie kolizji…';await new Promise(r=>setTimeout(r,30));configureDoors(gltf.scene);buildCollision();ready=true;$('progress').hidden=true;$('start').disabled=false;$('start').textContent='Rozpocznij spacer';$('status').textContent=`Gotowe · ${doors.length} drzwi interaktywnych`;window.walkthrough={scene,camera,doors,move,cast,blocked,teleport,renderer,controls,ready:true};}catch(e){fail(e)}},p=>{if(p.total){$('progress').value=p.loaded/p.total*100;$('status').textContent=`Wczytywanie ${Math.round(p.loaded/p.total*100)}%`}},fail);
 function fail(e){console.error(e);$('status').textContent='Nie udało się wczytać modelu. Sprawdź dostęp do plików strony i odśwież.'}
 if(new URLSearchParams(location.search).has('qa')){const timer=setInterval(()=>{if(!ready)return;clearInterval(timer);import('./qa.js').then(m=>m.run(window.walkthrough,T))},300)}
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 renderer.setAnimationLoop(now=>{const dt=Math.min((now-last)/1000,.05);last=now;update(dt);renderer.render(scene,camera)});
+
+
 
 

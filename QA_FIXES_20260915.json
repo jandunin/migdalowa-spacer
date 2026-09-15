@@ -1,0 +1,9 @@
+{
+  "browser": "Chromium, local WebGL runtime",
+  "stairAscent": {"startEyeY":1.65,"endPosition":[6.000064564701807,4.671086288499646,-3.569920490096476],"passed":true},
+  "stairDescent": {"endPosition":[7.049968226996292,1.65,-3.5098215694458728],"passed":true},
+  "doors": {"count":6,"allClosedBlocked":true,"allOpenClear":true,"passageMovement":true},
+  "staticObjectsMovedWhenOpeningDoors":0,
+  "fixes":["Test body collision after stepping onto tread","Toe ray above permitted riser height","Explicit door handle and inset ownership","Opaque imported materials no longer use alpha blending","Reduced washout from hemisphere light and exposure"],
+  "limitations":["Not all model surfaces match reference renders","No complete reference material reconstruction in this fix","All-room collision audit remains incomplete"]
+}
