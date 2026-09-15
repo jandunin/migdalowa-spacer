@@ -1,0 +1,17 @@
+{
+  "date":"2026-09-14",
+  "environment":"Codex Chromium in-app browser, http://127.0.0.1:4173",
+  "modelBytes":29081824,
+  "doors":[
+    {"id":"parter-1","closedBlocked":true,"openPassage":true,"parts":4},
+    {"id":"parter-2","closedBlocked":true,"openPassage":true,"parts":4},
+    {"id":"parter-3","closedBlocked":true,"openPassage":true,"parts":3},
+    {"id":"wejsciowe","closedBlocked":true,"openPassage":true,"parts":4},
+    {"id":"pietro-1","closedBlocked":true,"openPassage":true,"parts":4},
+    {"id":"pietro-2","closedBlocked":true,"openPassage":true,"parts":3}
+  ],
+  "movement":{"corridorDistance":1.0001999800040131,"eyeHeight":1.65,"closedZ":-2.3176783025264753,"openZ":-1.4176783025264785,"crossedDoor":true},
+  "keyboardO":"Actual browser key press changed Otworz to Zamknij; screenshot showed opening leaf with fixed frame",
+  "pointerLock":"Embedded browser rejects pointer lock with WrongDocumentError; drag-to-look fallback was implemented and exercised. Native browser pointer lock not tested.",
+  "limitations":["Other doors static","Full room and stair collision audit incomplete","Simplified lighting and mirror reflections","No public deployment or external GitHub Actions run"]
+}
